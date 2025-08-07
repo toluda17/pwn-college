@@ -3,10 +3,58 @@ I'm now starting the Web Security module on Pwn College.
 
 In this section, I’ll be learning about common web vulnerabilities, how they work, and how to exploit them in controlled environments. I’m aiming to strengthen my understanding of how web applications can be attacked — and ultimately, how they can be better defended.
 
+Unfortunately, for academic integrity reasons, I can't actually put down my code here but I'm going to write walkthroughs of the steps I took in solving each challenge.
+
 Let’s begin.
 
-# CHALLENGE 1: PATH TRAVERSAL
-"This challenge explores how naive Linux path resolution can be abused via crafted web requests. The goal is to trick a basic web server into serving unauthorized files — specifically, the flag.
+# CHALLENGE 1: PATH TRAVERSAL 1
+This challenge is about path traversal — basically tricking the server into reading files it’s not supposed to by messing with file paths. The webserver is supposed to only serve files from /challenge/files/, but the way it’s coded, it just slaps the user input straight onto that path and tries to open it.
 
-You're given a custom server binary located at `/challenge/server`, which serves files from `/challenge/files` over HTTP. Run it like any normal challenge, then interact with it using a browser or tools like `curl`."
+The key part is this:
 
+requested_path = app.root_path + "/files/" + path
+return open(requested_path).read()
+
+The path variable is whatever I put after /repository/ in the URL. Since the server doesn’t check if path tries to go up directories (like with ../), I can easily escape from /files/ and grab other files on the system.
+
+I realized I could use ../ to move up the folder tree. So I requested:
+
+GET /repository/../../flag.txt
+
+which the server reads as /challenge/files/../../flag.txt → /flag.txt. That let me access the flag outside the intended folder.
+
+# CHALLENGE 2: PATH TRAVERSAL 2
+This challenge tries to stop path traversal by stripping leading dots and slashes from the user input path. However, the method used is pretty naive and doesn’t cover all cases.
+
+I noticed that .strip("/.") only removes dots and slashes at the start and end of the string. So if I prepend a word before the ../, the strip doesn’t remove it anymore. For example, sending a path like:
+
+GET /content/bypass../..//flag.txt
+
+lets the ../.. stay intact in the middle, effectively moving up X+1 directories (one more than the number of ../ parts) because of how the path joins.
+
+# CHALLENGE 3: CMDi 1
+This challenge shows how passing user input directly to a shell command without sanitization can lead to command injection (CMDi). The server runs ls -l on whatever directory you provide via the target parameter.
+
+Since the server runs the command using 'shell=True', I can inject extra shell commands by using special characters like ';'.
+For example, I sent:
+
+target=/challenge; cat /flag.txt
+
+which runs: ls -l /challenge; cat /flag.txt so it lists /challenge and then outputs the flag.
+
+This works because the server passes the user input directly to a shell command with shell=True, it executes everything, including injected commands separated by ;. There’s no sanitization or escaping, so CMDi happens.
+
+# CHALLENGE 4: CMDi 2
+This challenge tries to block command injection by removing ';' from the user input, but it still runs the command with shell=True. So I had to find another way to inject commands without using ';'.
+
+I remembered that the pipe character '|' can chain commands too. It wasn’t filtered out, so I used it to pipe the output of ls into another command. For example:
+
+ls -l /challenge | cat /flag.txt would list /challenge and then print the flag. Since the server just appends my input directly, I injected:
+
+/challenge | cat /flag.txt
+
+as the subdirectory parameter.
+
+This works because the server runs the command in a shell and only removes ;, but not pipes (|). Pipes let me chain commands, so my injected command runs after the ls. This bypasses the naive filtering.
+
+# CHALLENGE 4: CMDi 2
