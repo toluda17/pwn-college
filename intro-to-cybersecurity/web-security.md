@@ -57,4 +57,35 @@ as the subdirectory parameter.
 
 This works because the server runs the command in a shell and only removes ;, but not pipes (|). Pipes let me chain commands, so my injected command runs after the ls. This bypasses the naive filtering.
 
-# CHALLENGE 4: CMDi 2
+# CHALLENGE 5: CMDi 3
+This challenge tries to block injection by wrapping my input in single quotes like this:
+
+ls -l 'user_input'
+
+The single quotes prevent special characters from working inside, because the shell treats everything inside quotes literally — until it finds a matching '. I realized I could break out of the single quotes by injecting a ' to close the current quote early, then add my malicious command, and finally fix the quotes so the whole command stays valid. For example, I sent:
+
+' ; cat /flag.txt #
+The resulting command looked like:
+
+ls -l '' ; cat /flag.txt #'  
+
+The first '' is just an empty argument (from the broken quotes). Then the ; cat /flag.txt runs my command. 
+The # comments out the trailing ' to avoid syntax errors.
+
+This works because the shell needs matching quotes, so I close the initial quote early with a ', inject my command, then comment out the leftover trailing quote with #. This tricks the shell into running my injected command safely.
+
+# CHALLENGE 6: CMDi 4
+This challenge runs a command like:
+
+TZ=user_input date
+
+where the user input sets the timezone environment variable before running the date command.
+I figured out I could inject a command by ending the TZ= value early and then chaining my own command. Since it’s setting an environment variable, I could do something like:
+
+TZ=foo; cat /flag.txt # This way, the shell runs:
+
+TZ=foo; cat /flag.txt # date. The ';' ends the TZ= assignment, then my cat /flag.txt runs, and # comments out the rest (date) so it doesn’t cause errors.
+This works because the shell runs the whole line, and TZ=foo; ends the environment variable assignment, letting me run arbitrary commands after it. The # comments out the rest so no syntax errors happen.
+
+# CHALLENGE 8: CMDi 6
+
