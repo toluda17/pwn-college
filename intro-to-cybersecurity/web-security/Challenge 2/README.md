@@ -3,6 +3,7 @@ This challenge tries to stop path traversal by stripping leading dots and slashe
 
 I noticed that .strip("/.") only removes dots and slashes at the start and end of the string. So if I prepend a word before the ../, the strip doesn’t remove it anymore. For example, sending a path like:
 
+```bash
 GET /content/bypass../..//flag.txt
-
+```
 lets the ../.. stay intact in the middle, effectively moving up X+1 directories (one more than the number of ../ parts) because of how the path joins.
