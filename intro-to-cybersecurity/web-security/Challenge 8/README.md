@@ -3,11 +3,14 @@ This challenge aggressively filters dangerous characters like ;, &, |, $, and ev
 
 To test it out, I injected:
 
+```bash
 /challenge\ncat /flag.txt
-
+```
 This made the shell see two lines:
 
+```bash
 ls -l /challenge cat /flag.txt
+```
 
 So the first line lists the directory like normal, and the second line prints the flag.
 
