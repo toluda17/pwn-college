@@ -3,12 +3,14 @@ This challenge is about path traversal — basically tricking the server into re
 
 The key part is this:
 
+```bash
 requested_path = app.root_path + "/files/" + path return open(requested_path).read()
-
+```
 The path variable is whatever I put after /repository/ in the URL. Since the server doesn’t check if path tries to go up directories (like with ../), I can easily escape from /files/ and grab other files on the system.
 
 I realized I could use ../ to move up the folder tree. So I requested:
 
+```bash
 GET /repository/../../flag.txt
-
+```
 which the server reads as /challenge/files/../../flag.txt → /flag.txt. That let me access the flag outside the intended folder.
